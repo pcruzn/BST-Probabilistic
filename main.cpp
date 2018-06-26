@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include <iomanip>
+#include <fstream>
 #define NULLPROBABILITY -1.0
 
 class Node {
@@ -122,6 +123,8 @@ std::vector<Node> TreeHelper::greedyTree(std::vector<float> dataElements, std::v
     );
 
     for(float elementInData : dataElements) {
+        // dummy use for zero Warnings!!
+        if(elementInData) {}
         int currentValueAssociatedToMaxProbability = arrayHelper.getPositionOfMaxElement(&dataElements) + 1;
         for(Node currentNodeInTreeEvaluated : tree) {
             if ((currentValueAssociatedToMaxProbability < currentNodeInTreeEvaluated.getValue()) &&
@@ -133,7 +136,8 @@ std::vector<Node> TreeHelper::greedyTree(std::vector<float> dataElements, std::v
                 treeHelper.setLeftChildNode(
                         Node(
                                 currentValueAssociatedToMaxProbability,
-                                arrayHelper.selectMaxProbability(&dataElements)),
+                                arrayHelper.selectMaxProbability(&dataElements)
+                        ),
                         treeHelper.getPositionOfFirstNodeFound(currentNodeInTreeEvaluated, &tree),
                         &tree);
                 break;
@@ -147,7 +151,8 @@ std::vector<Node> TreeHelper::greedyTree(std::vector<float> dataElements, std::v
                 treeHelper.setRightChildNode(
                         Node(
                                 currentValueAssociatedToMaxProbability,
-                                arrayHelper.selectMaxProbability(&dataElements)),
+                                arrayHelper.selectMaxProbability(&dataElements)
+                        ),
                         treeHelper.getPositionOfFirstNodeFound(currentNodeInTreeEvaluated, &tree),
                         &tree);
                 break;
@@ -182,20 +187,61 @@ float TreeHelper::getExpectedCost(std::vector<Node> tree) {
 
 int main() {
     TreeHelper treeHelper;
-    // there won't be more than 202 nodes addressed in the (vector)
-    // 100 elements * 2 + 2 = 200 + 2 = 202
-    std::vector<Node> tree(202);
 
-    std::vector<float> tempArray = {0.33, 0.32, 0.84, 0.5};
+    std::string fileDataLine;
+    std::ifstream inFile;
+    inFile.open("data.txt");
 
-    tree = treeHelper.greedyTree(tempArray, tree);
+    if (inFile.fail()) {
+        std::cerr << "Could not open data file!" << std::endl;
+        inFile.close();
+        return 0;
+    }
 
-    // print the tree in "vector form"
-    for (Node node : tree)
-        std::cout << node.getValue() << " " << " " << node.getProbability() << std::endl;
+    while (inFile.good()) {
+        // there won't be more than 202 nodes addressed in the (vector)
+        // 100 elements * 2 + 2 = 200 + 2 = 202
+        std::vector<Node> tree(202);
+        std::vector<float> probabilities;
+        std::getline(inFile, fileDataLine);
+        std::getline(inFile, fileDataLine);
 
-    // print expected cost (i.e., sum of probability(i) times level(i), where i is Node i)
-    std::cout << std::fixed << std::setprecision(4) << treeHelper.getExpectedCost(tree) << std::endl;
+        // getline() has been showing some undefined behavior.
+        // therefore, we need to put the 'second line' in a temp file and then read it again.
+        std::ofstream tempFile;
+        tempFile.open("temp.txt");
+
+        if (tempFile.fail()) {
+            std::cerr << "Could not open temp file for writing!" << std::endl;
+            inFile.close();
+            return 0;
+        }
+
+        tempFile << fileDataLine;
+        tempFile.close();
+
+        std::ifstream inTempFile;
+
+        if (inTempFile.fail()) {
+            std::cerr << "Could not open temp file for reading!" << std::endl;
+            inFile.close();
+            return 0;
+        }
+
+        inTempFile.open("temp.txt");
+
+        std::string tmpFrequencyValueInLine;
+        while (std::getline(inTempFile, tmpFrequencyValueInLine, ' ')) {
+            probabilities.push_back(std::stof(tmpFrequencyValueInLine));
+        }
+        inTempFile.close();
+
+
+        tree = treeHelper.greedyTree(probabilities, tree);
+
+        std::cout << std::fixed << std::setprecision(4) << treeHelper.getExpectedCost(tree) << std::endl;
+    }
+
 
     return 0;
 }
